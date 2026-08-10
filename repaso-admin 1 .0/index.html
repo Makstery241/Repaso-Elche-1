@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0e3b2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Repaso Admin">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>Repaso Admin · Tarjetas</title>
+<style>
+  :root{
+    --bg:#0e1726; --bg2:#0a1120; --panel:#16233a; --panel2:#1d2f4d;
+    --line:#26374f; --ink:#eef4fb; --soft:#9db0c9; --muted:#6f819b;
+    --azul:#3d82d6; --azul-d:#2c66ac; --verde:#28b46b; --verde-d:#1e8f54;
+    --rojo:#e5484d; --naranja:#e6913c; --morado:#9b6bd6; --dorado:#e0b64a;
+    --shadow:0 18px 40px -18px rgba(0,0,0,.7);
+    --r:18px;
+    --pagebg:radial-gradient(120% 90% at 50% -10%, var(--bg2) 0%, var(--bg) 60%);
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#eef2f7; --bg2:#e3e9f1; --panel:#ffffff; --panel2:#f4f7fb;
+      --line:#dbe3ee; --ink:#132033; --soft:#4a5a71; --muted:#7c8aa0;
+      --shadow:0 16px 34px -20px rgba(20,40,70,.45);
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  html{background:var(--bg)}   /* evita la franja blanca bajo el body (área segura iOS) */
+  body{
+    margin:0;color:var(--ink);background:transparent;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,Arial,sans-serif;
+    line-height:1.5;overscroll-behavior:none;
+  }
+  /* Capa de fondo fija que cubre TODA la pantalla (incluida el área segura inferior del iPad),
+     así no queda ninguna franja blanca. Toma el color/degradado del tema activo (--pagebg). */
+  body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--pagebg);pointer-events:none}
+  .app{max-width:760px;margin:0 auto;min-height:100%;
+    padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 24px);
+    display:flex;flex-direction:column}
+  .hidden{display:none!important}
+  button{font-family:inherit;cursor:pointer}
+
+  /* ---------- HOME ---------- */
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .brand .logo{width:44px;height:44px;border-radius:13px;flex:none;
+    background:linear-gradient(135deg,#1f9d6b,#0e7c9b);
+    display:grid;place-items:center;font-size:23px;box-shadow:var(--shadow)}
+  .brand h1{font-size:21px;margin:0;letter-spacing:-.3px}
+  .brand p{margin:1px 0 0;font-size:12.5px;color:var(--soft)}
+
+  .sectitle{font-size:12px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--muted);margin:20px 2px 9px;display:flex;justify-content:space-between;align-items:center}
+  .sectitle .selall{font-size:11.5px;color:var(--azul);font-weight:700;cursor:pointer;letter-spacing:.2px;text-transform:none}
+
+  .blk{margin-bottom:6px}
+  .blk-h{font-size:12.5px;font-weight:800;color:var(--soft);margin:14px 4px 8px;
+    display:flex;align-items:center;gap:8px}
+  .blk-h .ln{flex:1;height:1px;background:var(--line)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:460px){.grid{grid-template-columns:1fr}}
+  .tcard{position:relative;text-align:left;background:var(--panel);border:1.5px solid var(--line);
+    border-radius:15px;padding:13px 13px 12px;transition:transform .12s,border-color .15s,background .15s;
+    color:var(--ink);display:flex;flex-direction:column;gap:3px;min-height:78px}
+  .tcard:active{transform:scale(.98)}
+  .tcard .num{font-size:11px;font-weight:800;color:var(--azul);letter-spacing:.5px}
+  .tcard .tt{font-size:14px;font-weight:700;line-height:1.28}
+  .tcard .cnt{font-size:11px;color:var(--muted);margin-top:auto}
+  .tcard .chk{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;
+    border:2px solid var(--line);display:grid;place-items:center;font-size:13px;color:#fff;transition:.15s}
+  .tcard.sel{border-color:var(--verde);background:var(--panel2)}
+  .tcard.sel .chk{background:var(--verde);border-color:var(--verde)}
+  .tcard .prog{font-size:10.5px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+  .tcard .prog b{font-weight:800}
+  .tcard .prog .d{color:var(--verde)} .tcard .prog .f{color:var(--rojo)} .tcard .prog .n{color:var(--muted)}
+  .tcard .pbar{height:4px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
+  .tcard .pbar i{display:block;height:100%;width:0;background:var(--verde)}
+
+  /* ---------- config bar / start ---------- */
+  .cfg{margin-top:22px;background:var(--panel);border:1.5px solid var(--line);border-radius:var(--r);
+    padding:16px;box-shadow:var(--shadow)}
+  .cfg h3{margin:0 0 3px;font-size:15px}
+  .cfg .hint{font-size:12.5px;color:var(--soft);margin:0 0 13px}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:46px;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);
+    font-weight:800;font-size:14.5px;border-radius:12px;padding:12px 6px;transition:.13s}
+  .seg button.on{background:var(--azul);border-color:var(--azul);color:#fff}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px}
+  .toggle-row .lab{font-size:13.5px}
+  .toggle-row .lab small{display:block;color:var(--muted);font-size:11.5px;font-weight:500}
+  .switch{position:relative;width:50px;height:29px;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:var(--line);border-radius:30px;transition:.2s}
+  .slider:before{content:"";position:absolute;height:23px;width:23px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .switch input:checked + .slider{background:var(--verde)}
+  .switch input:checked + .slider:before{transform:translateX(21px)}
+
+  .go{margin-top:16px;width:100%;border:0;border-radius:14px;padding:16px;font-size:17px;font-weight:800;
+    color:#fff;background:linear-gradient(135deg,var(--verde),var(--verde-d));box-shadow:var(--shadow)}
+  .go:disabled{background:var(--line);color:var(--muted);box-shadow:none}
+  .go.sec{margin-top:10px;background:linear-gradient(135deg,var(--rojo),#b83b3f);font-size:15px;padding:13px}
+  .go.sec:disabled{background:var(--line);color:var(--muted);box-shadow:none}
+  .selinfo{text-align:center;font-size:12.5px;color:var(--soft);margin-top:9px;min-height:16px}
+  .progsum{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+    padding:10px 12px;font-size:12.5px;color:var(--soft);display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
+  .progsum b{color:var(--ink)}
+  .progsum .d b{color:var(--verde)} .progsum .f b{color:var(--rojo)}
+  .reset{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:10px;cursor:pointer;text-decoration:underline}
+
+  /* ---------- STUDY ---------- */
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .iconbtn{width:40px;height:40px;flex:none;border-radius:12px;border:1.5px solid var(--line);
+    background:var(--panel);color:var(--ink);font-size:18px;display:grid;place-items:center}
+  .progwrap{flex:1}
+  .progtop{display:flex;justify-content:space-between;font-size:12px;color:var(--soft);margin-bottom:5px}
+  .progtop b{color:var(--ink)}
+  .progbar{height:7px;border-radius:6px;background:var(--line);overflow:hidden}
+  .progbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--azul),var(--verde));transition:width .3s}
+
+  .temachip{display:inline-block;font-size:11px;font-weight:800;color:var(--azul);
+    background:color-mix(in srgb,var(--azul) 16%,transparent);border-radius:20px;padding:4px 11px;
+    letter-spacing:.3px;margin-bottom:10px}
+
+  .scene{perspective:1600px;flex:1;display:flex;min-height:340px}
+  .card3d{position:relative;width:100%;transition:transform .55s cubic-bezier(.4,.2,.2,1);
+    transform-style:preserve-3d}
+  .card3d.flip{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    border-radius:22px;border:1.5px solid var(--line);background:var(--panel);box-shadow:var(--shadow);
+    padding:22px;display:flex;flex-direction:column;overflow:auto}
+  .face .flabel{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;justify-content:space-between}
+  .front .qtext{font-size:20px;font-weight:600;line-height:1.4;flex:1;display:flex;align-items:center}
+  @media(min-width:620px){.front .qtext{font-size:23px}}
+  .back{transform:rotateY(180deg);background:linear-gradient(160deg,var(--panel2),var(--panel))}
+  .back .flabel{color:var(--verde)}
+  .back .atext{font-size:15.5px;line-height:1.6}
+  .ansok{display:flex;align-items:center;gap:11px;margin-bottom:14px;
+    background:color-mix(in srgb,var(--verde) 16%,var(--panel));border:1px solid var(--verde-d);
+    border-radius:13px;padding:11px 13px}
+  .okbadge{flex:none;width:31px;height:31px;border-radius:9px;background:var(--verde);color:#fff;
+    font-weight:800;font-size:16px;display:grid;place-items:center;box-shadow:0 3px 9px -3px var(--verde)}
+  .oktxt{font-weight:700;font-size:15px;line-height:1.35;color:var(--ink)}
+  .ansexp{padding-left:13px;border-left:3px solid var(--verde-d);font-size:15.5px;line-height:1.6;color:var(--ink)}
+  .exlab{display:block;font-size:10.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--verde);margin-bottom:4px}
+  .anschosen{margin-top:14px;background:color-mix(in srgb,var(--rojo) 10%,var(--panel));
+    border:1px solid color-mix(in srgb,var(--rojo) 55%,var(--line));border-radius:11px;
+    padding:9px 12px;font-size:12.5px;line-height:1.45;color:var(--soft)}
+  .anschosen b{color:var(--rojo)}
+  .anscita{margin-top:14px;background:color-mix(in srgb,var(--azul) 9%,var(--panel));
+    border:1px solid color-mix(in srgb,var(--azul) 45%,var(--line));border-radius:11px;
+    padding:10px 12px;font-size:13px;line-height:1.5;color:var(--ink)}
+  .anscita .exlab{color:var(--azul)}
+  body.eink .anscita{background:#fff !important;border:2px solid #000}
+  body.eink .anscita .exlab{color:#000 !important}
+  .tap-hint{text-align:center;font-size:12px;color:var(--muted);margin-top:10px;min-height:16px}
+  .tap-hint.pulse{animation:pulseh 1.8s infinite}
+  @keyframes pulseh{50%{opacity:.4}}
+
+  /* opciones test */
+  .opts{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+  .opt{display:flex;gap:11px;align-items:flex-start;text-align:left;width:100%;
+    border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:13px;
+    padding:13px 13px;font-size:14.5px;line-height:1.4;transition:.13s}
+  .opt .k{flex:none;width:24px;height:24px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);
+    display:grid;place-items:center;font-weight:800;font-size:12.5px;color:var(--soft)}
+  .opt:active{transform:scale(.99)}
+  .opt.correct{border-color:var(--verde);background:color-mix(in srgb,var(--verde) 15%,var(--panel))}
+  .opt.correct .k{background:var(--verde);color:#fff;border-color:var(--verde)}
+  .opt.wrong{border-color:var(--rojo);background:color-mix(in srgb,var(--rojo) 13%,var(--panel))}
+  .opt.wrong .k{background:var(--rojo);color:#fff;border-color:var(--rojo)}
+  .opt.lock{pointer-events:none}
+  .opt.dim{opacity:.55}
+  .opt.gone{opacity:.28;text-decoration:line-through;pointer-events:none}
+  .opt.picked{box-shadow:0 0 0 3px color-mix(in srgb,var(--azul) 45%,transparent) inset}
+
+  /* ---- HUD modo juego ---- */
+  .hud{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:12px}
+  .hudtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .hpts{font-size:22px;font-weight:800;color:var(--dorado);line-height:1}
+  .hpts small{font-size:11px;color:var(--muted);font-weight:700;margin-left:3px}
+  .hstreak{font-size:14px;font-weight:800;color:var(--naranja)}
+  .htime{font-size:16px;font-weight:800;color:var(--azul);font-variant-numeric:tabular-nums}
+  .htime.warn{color:var(--naranja)} .htime.crit{color:var(--rojo);animation:blink .7s infinite}
+  @keyframes blink{50%{opacity:.4}}
+  .timebar{height:6px;border-radius:5px;background:var(--line);overflow:hidden;margin:8px 0}
+  .timebar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--verde),var(--azul));transition:width .25s linear}
+  .timebar i.warn{background:var(--naranja)} .timebar i.crit{background:var(--rojo)}
+  .lifes{display:flex;gap:7px;flex-wrap:wrap}
+  .life{flex:1;min-width:60px;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);
+    border-radius:10px;padding:7px 6px;font-size:12px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:1px;transition:.13s}
+  .life .ic{font-size:16px}
+  .life .n{font-size:10px;color:var(--muted)}
+  .life:disabled{opacity:.35}
+  .life.on{border-color:var(--dorado);box-shadow:0 0 0 2px color-mix(in srgb,var(--dorado) 40%,transparent) inset}
+  .life.x2{color:var(--morado)} .life.t{color:var(--azul)} .life.f{color:var(--rojo)} .life.sh{color:var(--verde)}
+
+  .autox2{width:100%;margin-top:8px;border:1.5px solid var(--morado);background:transparent;color:var(--morado);
+    font-weight:800;font-size:13px;border-radius:10px;padding:9px}
+  .autox2.on{background:var(--morado);color:#fff}
+  body.eink .autox2{border:2px solid #000 !important;background:#fff !important;color:#000 !important}
+  body.eink .autox2.on{background:#000 !important;color:#fff !important}
+
+  .chiprow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .cardacts{display:flex;gap:6px}
+  .miniact{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);
+    font-size:15px;display:grid;place-items:center;color:var(--ink)}
+  .miniact.on{border-color:var(--azul);color:var(--azul)}
+  .miniact.fav{border-color:var(--dorado);color:var(--dorado);background:color-mix(in srgb,var(--dorado) 15%,var(--panel))}
+  .miniact:active{transform:scale(.94)}
+
+  .pointspop{text-align:center;font-size:20px;font-weight:800;color:var(--verde);height:24px;margin-top:6px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .pointspop.show{opacity:1;animation:popup .6s}
+  @keyframes popup{0%{transform:translateY(8px) scale(.8)}60%{transform:translateY(-4px) scale(1.15)}100%{transform:translateY(0) scale(1)}}
+  .pointspop.bad{color:var(--rojo)} .pointspop.bonus{color:var(--dorado)}
+
+  /* prompt "¿la sabías?" */
+  .knew{margin-top:12px;background:color-mix(in srgb,var(--verde) 10%,var(--panel));border:1.5px solid var(--verde-d);
+    border-radius:13px;padding:12px;text-align:center}
+  .knew>span{font-size:13.5px;color:var(--ink);display:block;margin-bottom:9px}
+  .knewbtns{display:flex;gap:9px}
+  .knewbtns button{flex:1;border:1.5px solid var(--line);border-radius:11px;padding:12px;font-weight:800;font-size:14px}
+  .knewbtns .know{background:var(--verde);border-color:var(--verde);color:#fff}
+  .knewbtns .luck{background:var(--panel2);color:var(--dorado);border-color:var(--dorado)}
+
+  /* acciones tras responder (me gusta / descartar) */
+  .postacts{display:flex;gap:9px;margin-top:10px}
+  .postacts .pa{flex:1;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);
+    border-radius:11px;padding:12px;font-weight:800;font-size:14px}
+  .postacts .pa:active{transform:scale(.98)}
+  .postacts .like{border-color:var(--dorado);color:var(--dorado);background:color-mix(in srgb,var(--dorado) 10%,var(--panel))}
+  .postacts .like.on{background:var(--dorado);color:#0e1726}
+  .postacts .disc{border-color:var(--rojo);color:var(--rojo);background:color-mix(in srgb,var(--rojo) 10%,var(--panel))}
+  .postacts .disc.arm{background:var(--rojo);color:#fff}
+  .postacts .next{display:none;border-color:var(--azul);color:var(--azul);background:color-mix(in srgb,var(--azul) 10%,var(--panel))}
+
+  /* controles inferiores */
+  .studyfoot{margin-top:14px}
+  .showtest{width:100%;border:1.5px dashed var(--azul);background:transparent;color:var(--azul);
+    font-weight:800;font-size:14px;border-radius:13px;padding:13px;margin-bottom:10px}
+  .nav{display:flex;gap:10px}
+  .nav button{flex:1;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);
+    font-weight:800;font-size:15px;border-radius:13px;padding:14px}
+  .nav .know{background:color-mix(in srgb,var(--verde) 18%,var(--panel));border-color:var(--verde-d);color:var(--verde)}
+  .nav .dunno{background:color-mix(in srgb,var(--naranja) 16%,var(--panel));border-color:var(--naranja);color:var(--naranja)}
+  .nav button:disabled{opacity:.4}
+  .nextbtn{width:100%;background:linear-gradient(135deg,var(--azul),var(--azul-d))}
+
+  /* resultado juego */
+  .gamescore{margin-bottom:14px}
+  .bigscore{font-size:44px;font-weight:800;color:var(--dorado);line-height:1}
+  .bigscore small{font-size:15px;color:var(--muted)}
+  .gsrow{display:flex;justify-content:center;gap:16px;font-size:12.5px;color:var(--soft);margin-top:6px}
+  .gsbadge{margin-top:10px;font-size:14px;font-weight:800}
+
+  /* monedas + tienda */
+  .wallet{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;
+    background:var(--panel);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+  .wallet span{font-size:14px;color:var(--soft)} .wallet b{color:var(--dorado);font-size:16px}
+  .wbtn{border:1.5px solid var(--dorado);background:color-mix(in srgb,var(--dorado) 12%,var(--panel));
+    color:var(--dorado);font-weight:800;font-size:13px;border-radius:10px;padding:9px 12px}
+  .coinsline{font-size:13px;color:var(--soft);margin:2px 0 12px} .coinsline b{color:var(--dorado)}
+  .shoplink{color:var(--dorado);font-weight:800;cursor:pointer;text-decoration:underline}
+
+  /* comodín público (barras de %) */
+  .pubbar{display:flex;align-items:center;gap:6px;margin-top:6px;width:100%}
+  .pubbar i{display:block;height:7px;border-radius:4px;background:linear-gradient(90deg,var(--azul),var(--morado));min-width:2px}
+  .pubbar em{font-style:normal;font-size:11px;font-weight:800;color:var(--soft);flex:none}
+
+  /* mensaje del teléfono */
+  .infomsg{margin-top:10px;background:color-mix(in srgb,var(--azul) 12%,var(--panel));border:1.5px solid var(--azul-d);
+    border-radius:12px;padding:11px 13px;font-size:13.5px;color:var(--ink);animation:fade .3s}
+  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1}}
+
+  /* modal tienda */
+  .modal{position:fixed;inset:0;background:rgba(4,8,16,.66);display:flex;align-items:flex-end;justify-content:center;z-index:30}
+  @media(min-width:620px){.modal{align-items:center}}
+  .sheet{width:100%;max-width:560px;max-height:86vh;overflow:auto;background:var(--bg);border:1.5px solid var(--line);
+    border-radius:20px 20px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 20px)}
+  @media(min-width:620px){.sheet{border-radius:20px}}
+  .sheeth{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .sheeth h2{font-size:18px;margin:0;color:var(--ink)}
+  .coinsbig{font-size:30px;font-weight:800;color:var(--dorado);text-align:center;margin:6px 0}
+  .coinsbig small{font-size:14px;color:var(--muted)}
+  .shophint{font-size:12.5px;color:var(--soft);text-align:center;margin:0 0 14px}
+  .shoplist{display:flex;flex-direction:column;gap:9px}
+  .shopitem{display:flex;align-items:center;gap:11px;border:1.5px solid var(--line);background:var(--panel);
+    border-radius:13px;padding:11px 12px}
+  .shopitem .sic{font-size:22px;flex:none;width:34px;text-align:center}
+  .shopitem .sinfo{flex:1;min-width:0}
+  .shopitem .sinfo .sn{font-weight:800;font-size:14px}
+  .shopitem .sinfo .sd{font-size:11.5px;color:var(--muted)}
+  .shopitem .sown{font-size:11px;color:var(--soft);margin-top:2px}
+  .buybtn{border:0;border-radius:10px;padding:10px 12px;font-weight:800;font-size:13px;color:#0e1726;
+    background:var(--dorado);white-space:nowrap;flex:none}
+  .buybtn:disabled{background:var(--line);color:var(--muted)}
+  .buybtn.use{background:var(--azul);color:#fff}
+  .buybtn.own{background:transparent;color:var(--verde);border:1.5px solid var(--verde-d)}
+  .buybtn.play{background:linear-gradient(135deg,var(--morado),#7d4fc0);color:#fff}
+  .gambleres{text-align:center;font-weight:800;font-size:20px;padding:14px;margin:6px 0 12px;border-radius:14px;
+    background:var(--panel2);border:1.5px solid var(--line);color:var(--ink);letter-spacing:2px}
+  .gambleres.show{animation:popup .45s}
+  .gambleres.jackpot{background:color-mix(in srgb,var(--dorado) 24%,var(--panel));border-color:var(--dorado);color:var(--dorado);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--dorado) 30%,transparent)}
+  body.eink .gambleres{background:#fff !important;border:2px solid #000;color:#000 !important;letter-spacing:1px}
+  body.eink .gambleres.jackpot{background:#000 !important;color:#fff !important}
+  body.eink .buybtn.play{background:#fff !important;color:#000 !important;border:2px solid #000 !important}
+  .shophead{font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);
+    margin:14px 2px 4px;padding-top:8px;border-top:1px solid var(--line)}
+  .shophead:first-child{border-top:0;padding-top:0;margin-top:4px}
+  .trophycase{display:flex;flex-wrap:wrap;gap:8px;font-size:30px;background:var(--panel2);border:1.5px solid var(--line);
+    border-radius:12px;padding:12px;margin-bottom:8px;min-height:30px}
+  .trophycase .empty{font-size:12.5px;color:var(--muted);font-weight:600}
+  body.eink .trophycase{background:#fff !important;border:2px solid #000}
+  .confetti{position:fixed;top:-30px;z-index:60;pointer-events:none;will-change:transform,opacity;
+    animation:confall linear forwards}
+  @keyframes confall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(102vh) rotate(540deg);opacity:.85}}
+
+  /* ---------- RESULTS ---------- */
+  .result{background:var(--panel);border:1.5px solid var(--line);border-radius:var(--r);padding:26px 20px;
+    text-align:center;box-shadow:var(--shadow);margin-top:20px}
+  .result .big{font-size:52px;font-weight:800;line-height:1;margin:6px 0}
+  .result .ring{width:132px;height:132px;margin:6px auto 14px;border-radius:50%;display:grid;place-items:center;
+    background:conic-gradient(var(--verde) var(--pct,0%), var(--line) 0)}
+  .result .ring div{width:104px;height:104px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:27px;font-weight:800}
+  .stats{display:flex;gap:10px;margin:18px 0 6px}
+  .stat{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:12px 8px}
+  .stat b{display:block;font-size:22px}
+  .stat span{font-size:11px;color:var(--soft)}
+  .rbtns{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+  .rbtns button{border:0;border-radius:13px;padding:15px;font-size:15px;font-weight:800;color:#fff}
+  .rbtns .again{background:linear-gradient(135deg,var(--azul),var(--azul-d))}
+  .rbtns .home{background:var(--panel2);color:var(--ink);border:1.5px solid var(--line)}
+
+  .footnote{text-align:center;font-size:11px;color:var(--muted);margin-top:26px}
+  .empty{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--soft);font-size:14px;margin-top:10px}
+
+  /* ---------- TABLET EN HORIZONTAL (p. ej. iPad 10") ---------- */
+  /* Las 4 opciones en 2×2 para verlas de un golpe. No afecta a móvil vertical ni al modo ebook (body.eink). */
+  @media (orientation:landscape) and (min-width:720px){
+    body:not(.eink) .app{max-width:940px}
+    body:not(.eink) .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    body:not(.eink) .scene{min-height:180px}
+    body:not(.eink) .front .qtext{font-size:19px}
+  }
+
+  /* ---------- MODO KINDLE / E-INK ---------- */
+  body.eink{
+    --bg:#fff; --bg2:#fff; --panel:#fff; --panel2:#fff;
+    --line:#000; --ink:#000; --soft:#000; --muted:#333;
+    --azul:#000; --azul-d:#000; --verde:#000; --verde-d:#000;
+    --rojo:#000; --naranja:#000; --morado:#000; --dorado:#000; --shadow:none;
+    background:#fff !important; color:#000 !important;
+  }
+  body.eink::before{background:#fff !important}
+  body.eink *{animation:none !important;transition:none !important;box-shadow:none !important;text-shadow:none !important}
+  body.eink .brand .logo{background:#fff !important;border:2px solid #000}
+  body.eink .blk-h .ln{background:#000}
+  /* Kindle: la pantalla de estudio ocupa toda la altura disponible */
+  body.eink #study{display:flex;flex-direction:column;flex:1}
+  /* tarjeta sin volteo 3D: la pregunta crece para rellenar el hueco */
+  body.eink .scene{perspective:none;display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
+  body.eink .card3d{transform:none !important;transform-style:flat;display:flex;flex-direction:column;flex:1}
+  body.eink .face{position:static;-webkit-backface-visibility:visible;backface-visibility:visible;
+    transform:none !important;border:2px solid #000;border-radius:8px;background:#fff !important;margin-bottom:10px;overflow:visible;padding:18px}
+  body.eink .back{display:none;background:#fff !important}
+  body.eink .card3d.flip .back{display:flex}
+  body.eink .front{flex:1;justify-content:center}
+  body.eink .front .qtext{font-size:21px;color:#000}
+  /* tamaños cómodos para el Paperwhite */
+  body.eink .topbar{margin-bottom:10px}
+  body.eink .temachip{margin-bottom:8px}
+  body.eink .hud{padding:8px 10px;margin-bottom:10px}
+  body.eink .hpts{font-size:19px}
+  body.eink .opts{margin-top:10px;gap:8px}
+  body.eink .opt{padding:13px 12px;font-size:15px}
+  body.eink .opt .k{width:24px;height:24px;font-size:12.5px}
+  body.eink .tap-hint{margin-top:8px;font-size:12px}
+  body.eink .studyfoot{margin-top:0}
+  body.eink .postacts{margin-top:10px;gap:8px}
+  body.eink .postacts .pa{padding:15px 8px;font-size:14.5px}
+  body.eink .postacts .next{display:block}
+  body.eink .flabel,body.eink .back .flabel,body.eink .exlab,body.eink .back .flabel span{color:#000 !important}
+  body.eink .temachip{background:#fff;border:1.5px solid #000;color:#000}
+  body.eink .ansok{background:#fff !important;border:2px solid #000}
+  body.eink .okbadge{background:#000 !important;color:#fff !important}
+  body.eink .ansexp{border-left:3px solid #000}
+  body.eink .tap-hint{color:#000}
+  /* opciones: correcta = borde grueso + letra rellena; incorrecta = tachada */
+  body.eink .opt{border:1.5px solid #000;background:#fff;color:#000}
+  body.eink .opt .k{background:#fff;border:1.5px solid #000;color:#000}
+  body.eink .opt.correct{border-width:3px;font-weight:800;background:#fff}
+  body.eink .opt.correct .k{background:#000;color:#fff}
+  body.eink .opt.wrong{background:#fff;text-decoration:line-through;opacity:.75}
+  body.eink .opt.dim{opacity:.6}
+  /* botones grandes y con borde */
+  body.eink .iconbtn,body.eink .nav button,body.eink .showtest,body.eink .go,body.eink .miniact,body.eink .seg button,body.eink .tcard{
+    background:#fff !important;color:#000 !important;border:2px solid #000 !important}
+  body.eink .go{font-weight:800}
+  body.eink .seg button.on,body.eink .tcard.sel,body.eink .miniact.on,body.eink .miniact.fav,body.eink #einkBtn,body.eink .tcard.sel .chk{
+    background:#000 !important;color:#fff !important}
+  body.eink .tcard.sel .num,body.eink .tcard.sel .tt,body.eink .tcard.sel .cnt,body.eink .tcard.sel .prog{color:#fff !important}
+  body.eink .result .ring{background:#fff !important;border:2px solid #000}
+  body.eink .postacts .pa{background:#fff !important;color:#000 !important;border:2px solid #000 !important}
+  body.eink .postacts .like.on,body.eink .postacts .disc.arm{background:#000 !important;color:#fff !important}
+  /* e-ink: ocultar solo lo que parpadea (cuenta atrás / popups); mantener HUD y comodines */
+  body.eink .timebar,body.eink .pointspop,body.eink .footnote{display:none !important}
+  body.eink .hud{background:#fff !important;border:2px solid #000}
+  body.eink .hpts,body.eink .hpts small,body.eink .hstreak,body.eink .htime{color:#000 !important}
+  body.eink .lifes{gap:5px}
+  body.eink .life{background:#fff !important;border:1.5px solid #000 !important;color:#000 !important;
+    flex-direction:row;min-width:0;flex:1 1 auto;padding:5px 7px;font-size:11px;gap:4px}
+  body.eink .life .ic{display:none}
+  body.eink .life .n{color:#000 !important;font-size:11px}
+  body.eink .life.on{background:#000 !important;color:#fff !important}
+  body.eink .life.on .n{color:#fff !important}
+  /* en Kindle se avanza con la barra de abajo (Siguiente); ocultamos el prompt y el botón del juego */
+  body.eink .knew,body.eink .nextbtn{display:none !important}
+  body.eink .wallet{background:#fff !important;border:2px solid #000}
+  body.eink .wallet span,body.eink .wallet b{color:#000 !important}
+  body.eink .wbtn,body.eink .buybtn{background:#fff !important;color:#000 !important;border:2px solid #000 !important}
+  body.eink .sheet,body.eink .shopitem{background:#fff !important;border:2px solid #000}
+  body.eink .sheeth h2,body.eink .coinsbig,body.eink .coinsbig small,body.eink .shophint,
+  body.eink .shopitem .sn,body.eink .shopitem .sd,body.eink .shopitem .sown,
+  body.eink .coinsline,body.eink .coinsline b{color:#000 !important}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ HOME ============ -->
+  <section id="home">
+    <div class="brand">
+      <div class="logo">🏛️</div>
+      <div>
+        <h1>Repaso Admin</h1>
+        <p>Administrativo (C1) · Ayuntamiento de Elche</p>
+      </div>
+    </div>
+
+    <div class="sectitle">
+      <span>1 · Elige tema(s)</span>
+      <span class="selall" id="selAll">Seleccionar todos</span>
+    </div>
+    <div id="temaList"></div>
+
+    <div class="wallet">
+      <span>🪙 <b id="coins">0</b> monedas</span>
+      <button class="wbtn" id="shopBtn">🛒 Tienda de comodines</button>
+    </div>
+
+    <div class="cfg">
+      <h3>2 · Configura el repaso</h3>
+      <p class="hint">¿Cuántas tarjetas quieres esta sesión?</p>
+      <div class="seg" id="sizeSeg">
+        <button data-n="15">15</button>
+        <button data-n="30" class="on">30</button>
+        <button data-n="50">50</button>
+        <button data-n="100">100</button>
+        <button data-n="0">Todas</button>
+      </div>
+
+      <div class="toggle-row">
+        <div class="lab">Mostrar opciones tipo test
+          <small>Botón para ver 4 respuestas en cada tarjeta</small></div>
+        <label class="switch"><input type="checkbox" id="tgTest" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="lab">Barajar tarjetas
+          <small>Orden aleatorio cada sesión</small></div>
+        <label class="switch"><input type="checkbox" id="tgShuffle" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="lab">Repaso inteligente
+          <small>Prioriza falladas y sin ver, e incluye un 20% ya contestadas para repasar</small></div>
+        <label class="switch"><input type="checkbox" id="tgSmart" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="lab">🔁 Repaso adaptativo en la partida
+          <small>Añade hasta un 15% extra repitiendo las que fallas, dudas o resuelves con comodín</small></div>
+        <label class="switch"><input type="checkbox" id="tgAdapt"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="lab">🎮 Modo juego
+          <small>Puntos, tiempo, pistas (50:50, ×2…) y rachas</small></div>
+        <label class="switch"><input type="checkbox" id="tgJuego" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="lab">⏱ Tiempo por pregunta
+          <small>Desactívalo para responder sin cronómetro ni presión</small></div>
+        <label class="switch"><input type="checkbox" id="tgTiempo" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="lab">🔊 Sonidos
+          <small>Aviso suave de acierto y de fallo</small></div>
+        <label class="switch"><input type="checkbox" id="tgSonido" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="lab">📖 Modo Kindle (e-ink)
+          <small>Vista simple en blanco y negro, sin animaciones ni tiempo. También con el botón 📖 dentro del repaso</small></div>
+        <label class="switch"><input type="checkbox" id="tgEink"><span class="slider"></span></label>
+      </div>
+
+      <button class="go" id="startBtn" disabled>Empezar repaso</button>
+      <button class="go sec hidden" id="failBtn">🔴 Repasar solo mis falladas</button>
+      <button class="go sec hidden" id="favBtnHome" style="background:linear-gradient(135deg,var(--dorado),#b8922f);color:#0e1726">⭐ Repasar solo mis buenas</button>
+      <div class="selinfo" id="selInfo">Selecciona al menos un tema</div>
+      <div class="progsum hidden" id="progSum"></div>
+      <span class="reset hidden" id="resetProg">Reiniciar mi progreso</span>
+      <span class="reset hidden" id="restoreDisc">Restaurar preguntas descartadas (<b id="discCount">0</b>)</span>
+    </div>
+
+    <div class="footnote">Toca la tarjeta para girarla y ver la respuesta. Tu progreso se guarda en este dispositivo.</div>
+  </section>
+
+  <!-- ============ STUDY ============ -->
+  <section id="study" class="hidden">
+    <div class="topbar">
+      <button class="iconbtn" id="exitBtn" aria-label="Salir">✕</button>
+      <div class="progwrap">
+        <div class="progtop"><span id="pgLabel">Tarjeta 1</span><span><b id="pgCur">1</b>/<span id="pgTot">30</span></span></div>
+        <div class="progbar"><i id="pgBar"></i></div>
+      </div>
+      <button class="iconbtn" id="einkBtn" title="Modo Kindle (e-ink)" aria-label="Alternar modo Kindle">📖</button>
+    </div>
+
+    <!-- HUD del modo juego -->
+    <div id="hud" class="hud hidden">
+      <div class="hudtop">
+        <div class="hpts"><span id="hScore">0</span><small>pts</small></div>
+        <div class="hstreak" id="hStreak">🔥 0</div>
+        <div class="htime" id="hTime">⏱ 60</div>
+      </div>
+      <div class="timebar"><i id="timeBar"></i></div>
+      <div class="lifes" id="lifes"></div>
+      <button class="autox2" id="autoX2Btn" type="button">⚡ ×2 auto: OFF</button>
+    </div>
+
+    <div class="chiprow">
+      <span class="temachip" id="temaChip">Tema</span>
+      <div class="cardacts">
+        <button class="miniact" id="ttsBtn" title="Escuchar" aria-label="Escuchar la pregunta">🗣️</button>
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="card3d" id="card3d">
+        <div class="face front">
+          <div class="flabel"><span>Pregunta</span><span id="qIdx"></span></div>
+          <div class="qtext" id="qText"></div>
+        </div>
+        <div class="face back">
+          <div class="flabel"><span>Respuesta</span></div>
+          <div class="atext" id="aText"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tap-hint pulse" id="tapHint">Toca la tarjeta para ver la respuesta</div>
+    <div class="pointspop" id="pointsPop"></div>
+    <div id="infoMsg" class="infomsg hidden"></div>
+
+    <div id="optsWrap" class="opts hidden"></div>
+
+    <!-- prompt "¿la sabías?" solo al acertar -->
+    <div id="knewWrap" class="knew hidden">
+      <span>Has acertado. ¿La sabías de verdad?</span>
+      <div class="knewbtns">
+        <button class="know" id="knewYes">✅ Sí, la sabía</button>
+        <button class="luck" id="knewLuck">🍀 Fue suerte</button>
+      </div>
+    </div>
+
+    <!-- acciones tras responder: guardar como buena o descartar -->
+    <div id="postActions" class="postacts hidden">
+      <button class="pa like" id="likeBtn">⭐ Me gusta</button>
+      <button class="pa disc" id="discBtn">🗑️ Descartar</button>
+      <button class="pa next" id="paNext">Siguiente ▶</button>
+    </div>
+
+    <div class="studyfoot">
+      <button class="showtest" id="showTest">📝 Ver opciones (test)</button>
+      <div class="nav" id="navFlash">
+        <button id="prevBtn">◀</button>
+        <button class="dunno" id="dunnoBtn">No la sabía</button>
+        <button class="know" id="knowBtn">La sabía ▶</button>
+      </div>
+      <button class="go nextbtn hidden" id="nextBtn">Siguiente ▶</button>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section id="results" class="hidden">
+    <div class="brand">
+      <div class="logo">🏁</div>
+      <div><h1>Sesión terminada</h1><p id="resTemas">—</p></div>
+    </div>
+    <div class="result">
+      <div class="gamescore hidden" id="gameScore">
+        <div class="bigscore"><span id="resScore">0</span> <small>pts</small></div>
+        <div class="gsrow">
+          <span>🔥 Mejor racha: <b id="resStreak">0</b></span>
+          <span>🛡️ Fallos anulados: <b id="resShield">0</b></span>
+        </div>
+        <div class="gsbadge" id="resBadge"></div>
+      </div>
+      <div class="ring" id="ring"><div id="ringPct">—</div></div>
+      <p style="margin:0;color:var(--soft);font-size:13px" id="resSub">Autoevaluación de la sesión</p>
+      <div class="stats">
+        <div class="stat"><b id="stKnow" style="color:var(--verde)">0</b><span>Acertadas</span></div>
+        <div class="stat"><b id="stDunno" style="color:var(--naranja)">0</b><span>Falladas</span></div>
+        <div class="stat"><b id="stTest" style="color:var(--azul)">0</b><span>Test acertado</span></div>
+      </div>
+      <div class="coinsline">🪙 <b id="coinsRes">0</b> monedas · <span class="shoplink" id="shopBtn2">🛒 Tienda</span></div>
+      <div class="rbtns">
+        <button class="again" id="againDunno">🔁 Repasar las falladas</button>
+        <button class="again" id="againAll" style="background:linear-gradient(135deg,var(--morado),#7d4fc0)">Nueva sesión (mismos temas)</button>
+        <button class="home" id="toHome">← Cambiar de temas</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TIENDA ============ -->
+  <div id="shop" class="modal hidden">
+    <div class="sheet">
+      <div class="sheeth">
+        <h2>🛒 Tienda de comodines</h2>
+        <button class="iconbtn" id="shopClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="coinsbig">🪙 <b id="coinsShop">0</b> <small>monedas</small></div>
+      <p class="shophint">Ganas monedas acertando (más rápido y con racha = más monedas). Gástalas en comodines, packs, juegos de azar, efectos y temas de color.</p>
+      <div id="gambleResult" class="gambleres hidden"></div>
+      <div id="shopList" class="shoplist"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="data/preguntas.js"></script>
+<script src="app.js"></script>
+<script>
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
